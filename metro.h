@@ -16,6 +16,8 @@ typedef uint16_t  u16;
 typedef uint32_t  u32;
 typedef uint64_t  u64;
 
+namespace metro::vm {
+
 /*
  *  An assembly instruction for virtual machine of metro.
  *  metro のバーチャルマシン向けのアセンブリを表現する構造体です
@@ -120,10 +122,8 @@ struct Asm {
 };
 
 struct VCPU {
-
-
   union {
-    u64   registers[16];
+    u64   registers[16] { };
 
     struct {
       u64   ra[4];
@@ -135,10 +135,7 @@ struct VCPU {
     };
   };
 
-  
-
   VCPU()
-    : registers({ 0 })
   {
   }
 };
@@ -171,5 +168,8 @@ public:
 };
 
 
-int make_codes_from_file(std::vector<Asm>& out, std::string const& path);
+bool assemble_from_file(std::string const& path);
+
+
+} // namespace metro::vm
 
