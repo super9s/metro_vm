@@ -29,18 +29,18 @@ void Machine::execute_code(std::vector<Asm> const& codes) {
         break;
 
       case Asm::Kind::Load:
-        cpu.registers[op.ra] = *(u64*)(cpu.registers[op.rb] + op.value) & ~(-1UL << op.width);
+        cpu.registers[op.ra] = *(u64*)(cpu.registers[op.rb] + op.value) & ~(-1UL << (static_cast<int>(op.data_type) * 8));
         cpu.registers[op.rb] += op.rd;
         break;
 
       case Asm::Kind::Store:
-        if( op.width == 8 )
+        if( op.data_type == Asm::DataType::Byte )
           *(u8*)(cpu.registers[op.rb] + op.value) = cpu.registers[op.ra] & 0xFF;
-        else if( op.width == 16 )
+        else if( op.data_type == Asm::DataType::Harf )
           *(u16*)(cpu.registers[op.rb] + op.value) = cpu.registers[op.ra] & 0xFFFF;
-        else if( op.width == 32 )
+        else if( op.data_type == Asm::DataType::Word )
           *(u32*)(cpu.registers[op.rb] + op.value) = cpu.registers[op.ra] & 0xFFFFFFFF;
-        else if( op.width == 64 )
+        else if( op.data_type == Asm::DataType::Long )
           *(u64*)(cpu.registers[op.rb] + op.value) = cpu.registers[op.ra];
 
         cpu.registers[op.rb] += op.rd;
