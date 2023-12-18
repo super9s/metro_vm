@@ -1,6 +1,8 @@
 #include <iostream>
 #include <fstream>
 #include <map>
+#include <codecvt>
+#include <locale>
 #include <optional>
 #include "metro.h"
 
@@ -20,6 +22,7 @@ struct Token {
     Ident,
     Register,
     Value,
+    String,
     Punctuater,
   };
 
@@ -154,9 +157,10 @@ public:
       // value
       else if( this->eat("#") ) {
         token.kind = Token::Kind::Value;
+        int base = this->eat("0x") ? 16 : 10;
 
-        if( auto&& [b, s] = this->eat_digits(); b ) {
-          token.value = std::stoull(s);
+        if( auto&& [b, s] = this->eat_digits(base); b ) {
+          token.value = std::stoull(s, nullptr, base);
           token.s = "#" + s;
         }
         else
@@ -167,6 +171,17 @@ public:
       else if( this->peek() == '_' || isalnum(this->peek()) ) {
         token.kind = Token::Kind::Ident;
         token.s = this->eat_ident();
+      }
+
+      // string
+      else if( this->eat("\"") ) {
+        token.kind = Token::Kind::String;
+        auto pos = ++this->position;
+
+        while( this->check() && !this->eat("\"") )
+          this->position++;
+        
+        token.s = this->source.substr(pos, this->position - pos - 1);
       }
 
       else {
@@ -232,6 +247,8 @@ public:
 
   std::vector<std::vector<Token>::iterator> matched;
 
+  std::map<std::string, size_t> labels;
+
   Assembler(std::string const& path)
     : source(open_text_file(path)),
       tokens(Lexer(this->source).lex()),
@@ -289,9 +306,9 @@ public:
       "str",
       "push",
       "pop",
-      "bl",
-      "b",
-      "bx",
+      "call",
+      "jmp",
+      "jmpx",
     };
 
     static constexpr auto get_inst_kind = [] (std::string const& name) -> std::optional<Asm::Kind> {
@@ -303,37 +320,109 @@ public:
     };
 
     std::vector<Asm> ret;
-    std::map<std::string, size_t> labels;
     auto& M = this->matched;
 
     while( this->iter != tokens.end() ) {
+
+      // label
+      if( this->match({Tk::Ident, ":"}) ) {
+        ret.emplace_back(Asm::Kind::Label).str = M[0]->s;
+      }
+
+      // data
+      else if( this->match({".", Tk::Ident}) ) {
+        static char const* dtypes[] = {
+          "byte",
+          "harf",
+          "word",
+          "long",
+          "string",
+        };
+
+        auto& op = ret.emplace_back(Asm::Kind::Data, 0, 0, 0);
+
+        for( int i = 0; i < std::size(dtypes); i++ ) {
+          if( M[1]->s == dtypes[i] ) {
+            op.data_type = static_cast<Asm::DataType>(i);
+            goto _found;
+          }
+        }
+
+        if( op.data_type == Asm::DataType::String ) {
+          std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> conv;
+
+          if( this->iter->kind != Tk::String ) {
+            Err("expected string literal");
+          }
+
+          auto str = conv.from_bytes(this->iter++->s);
+
+          auto data = new char16_t[str.length() + 1];
+
+          memcpy(data, str.data(), str.size());
+
+          op.data = (void*)data;
+        }
+        else {
+          if( this->iter->kind != Tk::Value ) {
+            Err("expected digits");
+          }
+
+          op.value = this->iter++->value;
+
+          // check data size
+          if( op.data_type == Asm::DataType::Byte && op.value <= 0xFF );
+          else if( op.data_type == Asm::DataType::Harf && op.value <= 0xFFFF );
+          else if( op.data_type == Asm::DataType::Word && op.value <= 0xFFFFFFFF );
+          else if( op.data_type == Asm::DataType::Long && op.value <= 0xFFFFFFFFFFFFFFFF );
+          else
+            Err("overflow");
+        }
+
+        Err("unknown data type '" + M[1]->s + "'");
+      _found:;
+      }
+
+      // call
+      else if( this->match({"call", Tk::Ident}) ) {
+        ret.emplace_back(Asm::Kind::Call).str = M[1]->s;
+      }
+
       /*
        * op rd, ra
        *    rd, #value
        *    rd, ra, rb
        *    rd, ra, #value
        */
-      if( auto k = get_inst_kind(this->iter->s); k && k.value() <= Asm::Kind::Rst ) {
+      else if( auto k = get_inst_kind(this->iter->s); k && k.value() <= Asm::Kind::Rst ) {
         this->iter++;
 
+        // rd
         if( !this->match({Tk::Register, ","}) )
           goto __err;
-        
+
         auto& op = ret.emplace_back(k.value(), M[0]->reg_index, M[0]->reg_index, 0);
 
+        // ra, rb
         if( this->match({Tk::Register, ",", Tk::Register}) ) {
           op.ra = M[0]->reg_index;
           op.rb = M[2]->reg_index;
         }
+
+        // ra, #value
         else if( this->match({Tk::Register, ",", Tk::Value}) ) {
           op.ra = M[0]->reg_index;
           op.value = M[2]->value;
           op.with_value = true;
         }
+
+        // #value
         else if( this->match({Tk::Value}) ) {
           op.value = M[0]->value;
           op.with_value = true;
         }
+
+        // ra
         else if( this->match({Tk::Register}) ) {
           op.ra = M[0]->reg_index;
         }
@@ -387,7 +476,7 @@ public:
           this->iter++->s == "push" ? Asm::Kind::Push : Asm::Kind::Pop, 0, 0, 0);
 
         this->expect("{");
-        
+
         do {
           if( this->iter->kind == Tk::Register )
             op.reglist |= 1 << this->iter++->reg_index;
@@ -412,4 +501,11 @@ std::vector<Asm> assemble_from_file(std::string const& path) {
   return Assembler(path).assemb();
 }
 
-} // namespace metro
+bool assemble_full(std::vector<u8>& out, std::vector<vm::Asm> const& codes) {
+
+  // todo
+
+  return false;
+}
+
+} // namespace metro::assembler

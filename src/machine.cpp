@@ -7,8 +7,9 @@ namespace metro::vm {
 void Machine::execute_code(std::vector<Asm> const& codes) {
 
   cpu.sp = this->stack;
+  cpu.lr = (u64)-1;
 
-  for( cpu.pc = 0; cpu.pc < codes.size(); ) {
+  for( cpu.pc = 0; cpu.pc != (u64)-1 && cpu.pc < codes.size(); ) {
     auto const& op = codes[cpu.pc];
 
     switch( op.kind ) {
@@ -19,6 +20,13 @@ void Machine::execute_code(std::vector<Asm> const& codes) {
           cpu.registers[op.rd] = cpu.registers[op.ra];
 
         break;
+
+      case Asm::Kind::Cmp: {
+
+        
+
+        break;
+      }
 
       case Asm::Kind::Add:
         if( op.with_value )

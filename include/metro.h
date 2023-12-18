@@ -147,7 +147,8 @@
     { printf("%s:%d: panic!\n",__FILE__,__LINE__),std::exit(1); }
 #endif
 
-#define  GETMASK(T)  (~((uint64_t)-1 << sizeof(T)))
+#define   GETMASK(T)  (~((uint64_t)-1 << sizeof(T)))
+#define   BIT(N)      (1 << N)
 
 typedef int8_t    i8;
 typedef int16_t   i16;
@@ -192,6 +193,7 @@ struct Asm {
     /*
      * load / store
      *
+     * member allocation:
      *  .ra     = rA
      *  .rb     = rAddr
      *  .value  = offs
@@ -205,17 +207,18 @@ struct Asm {
     Pop,        // pop    rA
 
     /* Branch */
-    Call,       // bl   <label>
-    Jump,       // b    <label>
-    Jumpx,      // bx   rA
+    Call,       // call   <label>
+    Jump,       // jmp    <label>
+    Jumpx,      // jmpx   rA
 
     /*
      * Place a data.
      *
-     * 
+     * アセンブリでの記述は DataType のメンバーを小文字で書いたものと同じ
      */
     Data,
 
+    Label,
 
   };
 
@@ -227,23 +230,10 @@ struct Asm {
     String,   // string literal of UTF-16
   };
 
-  enum RegisterList : u16 {
-    R0 = 1,
-    R1 = 1 << 1,
-    R2 = 1 << 2,
-    R3 = 1 << 3,
-    R4 = 1 << 4,
-    R5 = 1 << 5,
-    R6 = 1 << 6,
-    R7 = 1 << 7,
-    R8 = 1 << 8,
-    R9 = 1 << 9,
-    R10 = 1 << 10,
-    R11 = 1 << 11,
-    R12 = 1 << 12,
-    R13 = 1 << 13,
-    R14 = 1 << 14,
-    R15 = 1 << 15,
+  enum Condition {
+    Equal,
+    NotEqual,
+
   };
 
   Kind    kind;
@@ -256,9 +246,11 @@ struct Asm {
 
   union {
     u64     value;
-    u16     reglist;
+    u16     reglist;  // rN = (1 << N)
     void*   data;
   };
+
+  std::string str; // label, attr
 
   Asm(Kind kind, u8 rd, u8 ra, u8 rb)
     : kind(kind),
@@ -271,8 +263,8 @@ struct Asm {
   {
   }
 
-  Asm()
-    : Asm(Kind::Mov, 0, 0, 0)
+  Asm(Kind kind = Kind::Mov)
+    : Asm(kind, 0, 0, 0)
   {
   }
 
@@ -306,6 +298,15 @@ struct VCPU {
 };
 
 class Machine {
+  enum CompareResult {
+    None      = 0,
+    Equal     = BIT(0), // equal
+    UBigger   = BIT(1), // bigger  unsigned
+    USmaller  = BIT(2), // smaller unsigned
+    SBigger   = BIT(3), // bigger  signed
+    SSmaller  = BIT(4), // smaller signed
+  };
+
 public:
 
   Machine()
@@ -325,6 +326,7 @@ public:
 //private:
 
   VCPU cpu;
+  CompareResult cmp_result;
 
   u64 stack[0x1000];
 
@@ -337,6 +339,8 @@ public:
 namespace assembler {
 
 std::vector<vm::Asm> assemble_from_file(std::string const& path);
+
+bool assemble_full(std::vector<u8>& out, std::vector<vm::Asm> const& codes);
 
 } // namespace assembler
 

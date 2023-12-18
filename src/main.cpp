@@ -33,6 +33,9 @@ void test() {
 }
 
 int main(int argc, char** argv) {
+  (void)argc;
+  (void)argv;
+
   using namespace metro::vm;
 
   auto codes = assembler::assemble_from_file("test.txt");
