@@ -1,5 +1,7 @@
 #include "metro.h"
 
+using namespace metro::vm;
+
 int main(int argc, char** argv) {
   
   u64  val = 0;

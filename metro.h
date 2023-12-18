@@ -16,7 +16,9 @@ typedef uint16_t  u16;
 typedef uint32_t  u32;
 typedef uint64_t  u64;
 
-namespace metro::vm {
+namespace metro {
+
+namespace vm {
 
 /*
  *  An assembly instruction for virtual machine of metro.
@@ -167,9 +169,14 @@ public:
 
 };
 
+} // namespace vm
 
-bool assemble_from_file(std::string const& path);
+namespace assembler {
+
+std::vector<vm::Asm> assemble_from_file(std::string const& path);
+
+} // namespace assembler
 
 
-} // namespace metro::vm
+} // namespace metro
 

@@ -2,6 +2,8 @@
 #include <cstring>
 #include "metro.h"
 
+namespace metro::vm {
+
 void Machine::execute_code(std::vector<Asm> const& codes) {
 
   cpu.sp = this->stack;
@@ -74,3 +76,5 @@ void Machine::execute_code(std::vector<Asm> const& codes) {
 
 
 }
+
+} // namespace metro::vm
