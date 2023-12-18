@@ -344,7 +344,7 @@ public:
       else if( iter->s.length() >= 3 && (iter->s.starts_with("ldr") || iter->s.starts_with("str")) ) {
         auto& op = ret.emplace_back();
 
-        op.kind = iter++->s == "ldr" ? Asm::Kind::Load : Asm::Kind::Store;
+        op.kind = iter->s == "ldr" ? Asm::Kind::Load : Asm::Kind::Store;
 
         if( iter->s.length() > 3 ) {
           switch( iter->s[3] ) {
@@ -361,11 +361,11 @@ public:
           op.data_type = Asm::DataType::Long;
         }
 
-        if( !this->match({Tk::Register, ",", "[", Tk::Register}) )
+        if( !this->match({Tk::Ident, Tk::Register, ",", "[", Tk::Register}) )
           goto __err;
 
-        op.ra = this->matched[0]->reg_index;
-        op.rb = this->matched[3]->reg_index;
+        op.ra = this->matched[1]->reg_index;
+        op.rb = this->matched[4]->reg_index;
 
         // offset
         if( this->match({",", Tk::Value}) ) {
