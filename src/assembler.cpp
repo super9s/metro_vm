@@ -102,6 +102,14 @@ public:
   }
 
   std::vector<Token> lex() {
+    static constexpr std::pair<char const*, int> register_aliases[] = {
+      { "fp", 11 },
+      { "ip", 12 },
+      { "sp", 13 },
+      { "lr", 14 },
+      { "pc", 15 },
+    };
+
     std::vector<Token> tokens;
 
     this->pass_space();
@@ -138,33 +146,9 @@ public:
       }
 
       // register alias
-      else if( this->eat("fp") ) {
+      else if( auto [b, i] = std::make_tuple(false, 0); ({for( auto&& [x, y] : register_aliases ) if( this->eat(x) ) { b = true; i = y; break; } }), b ) {
         token.kind = Token::Kind::Register;
-        token.reg_index = 11;
-      }
-
-      // register alias
-      else if( this->eat("ip") ) {
-        token.kind = Token::Kind::Register;
-        token.reg_index = 12;
-      }
-
-      // register alias
-      else if( this->eat("sp") ) {
-        token.kind = Token::Kind::Register;
-        token.reg_index = 13;
-      }
-
-      // register alias
-      else if( this->eat("lr") ) {
-        token.kind = Token::Kind::Register;
-        token.reg_index = 14;
-      }
-
-      // register alias
-      else if( this->eat("pc") ) {
-        token.kind = Token::Kind::Register;
-        token.reg_index = 15;
+        token.reg_index = i;
       }
 
       // value
