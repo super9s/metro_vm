@@ -1,5 +1,8 @@
+/build
+/buildd
+
 *.o
+*.d
 *.txt
 
-lang
 *.exe
