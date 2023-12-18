@@ -227,6 +227,24 @@ struct Asm {
     String,   // string literal of UTF-16
   };
 
+  enum RegisterList : u16 {
+    R0 = 1,
+    R1 = 1 << 1,
+    R2 = 1 << 2,
+    R3 = 1 << 3,
+    R4 = 1 << 4,
+    R5 = 1 << 5,
+    R6 = 1 << 6,
+    R7 = 1 << 7,
+    R8 = 1 << 8,
+    R9 = 1 << 9,
+    R10 = 1 << 10,
+    R11 = 1 << 11,
+    R12 = 1 << 12,
+    R13 = 1 << 13,
+    R14 = 1 << 14,
+    R15 = 1 << 15,
+  };
 
   Kind    kind;
   u8      rd;
@@ -238,6 +256,7 @@ struct Asm {
 
   union {
     u64     value;
+    u16     reglist;
     void*   data;
   };
 
@@ -247,7 +266,7 @@ struct Asm {
       ra(ra),
       rb(rb),
       with_value(false),
-      data_type(DataType::Byte),
+      data_type(DataType::Long),
       value(0)
   {
   }

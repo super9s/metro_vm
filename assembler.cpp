@@ -107,6 +107,15 @@ public:
     this->pass_space();
 
     while( this->check() ) {
+      // comment
+      if( this->eat("@") ) {
+        while( this->check() && this->peek() != '\n' )
+          this->position++;
+
+        this->pass_space();
+        continue;
+      }
+
       auto& token = tokens.emplace_back();
 
       // register
@@ -244,6 +253,7 @@ public:
       tokens(Lexer(this->source).lex()),
       iter(tokens.begin())
   {
+    // for(auto&&t:tokens)std::cout<<t.s<<std::endl;
   }
 
   bool match(std::vector<Pattern> const& patterns) {
@@ -273,7 +283,14 @@ public:
     return false;
   }
 
+  void expect(std::string const& s) {
+    if( !this->eat(s) )
+      Err("expected '" + s + "'");
+  }
+
   std::vector<Asm> assemb() {
+    using Tk = Token::Kind;
+
     static constexpr char const* instructions[] = {
       "mov",
       "cmp",
@@ -303,51 +320,51 @@ public:
 
     std::vector<Asm> ret;
     std::map<std::string, size_t> labels;
+    auto& M = this->matched;
 
-    using Tk = Token::Kind;
+    while( this->iter != tokens.end() ) {
+      /*
+       * op rd, ra
+       *    rd, #value
+       *    rd, ra, rb
+       *    rd, ra, #value
+       */
+      if( auto k = get_inst_kind(this->iter->s); k && k.value() <= Asm::Kind::Rst ) {
+        this->iter++;
 
-    while( iter != tokens.end() ) {
-      // mov or cmp
-      if( (iter->s == "mov" || iter->s == "cmp") ) {
-        // rd, ra
-        if( this->match({Tk::Ident, Tk::Register, ",", Tk::Register}) )
-          ret.emplace_back(get_inst_kind(this->matched[0]->s).value(), this->matched[1]->reg_index, this->matched[3]->reg_index, 0);
-
-        // rd, #value
-        else if( this->match({Tk::Ident, Tk::Register, ",", Tk::Value}) )
-          ret.emplace_back(get_inst_kind(this->matched[0]->s).value(), this->matched[1]->reg_index, 0, 0, this->matched[3]->value);
-      }
-
-      // op rd, ra, rb (op = calc)
-      else if( this->match({Tk::Ident, Tk::Register, ",", Tk::Register, ",", Tk::Register}) ) {
-        auto kind = get_inst_kind(this->matched[0]->s).value();
-
-        if( Asm::Kind::Add <= kind && kind <= Asm::Kind::Rst ) {
-          ret.emplace_back(kind, this->matched[1]->reg_index, this->matched[3]->reg_index, this->matched[5]->reg_index);
-        }
-        else
+        if( !this->match({Tk::Register, ","}) )
           goto __err;
-      }
+        
+        auto& op = ret.emplace_back(k.value(), M[0]->reg_index, M[0]->reg_index, 0);
 
-      // op ra, rb (op = calc)
-      else if( this->match({Tk::Ident, Tk::Register, ",", Tk::Register}) ) {
-        auto kind = get_inst_kind(this->matched[0]->s).value();
-
-        if( Asm::Kind::Add <= kind && kind <= Asm::Kind::Rst ) {
-          ret.emplace_back(kind, this->matched[1]->reg_index, this->matched[1]->reg_index, this->matched[3]->reg_index);
+        if( this->match({Tk::Register, ",", Tk::Register}) ) {
+          op.ra = M[0]->reg_index;
+          op.rb = M[2]->reg_index;
+        }
+        else if( this->match({Tk::Register, ",", Tk::Value}) ) {
+          op.ra = M[0]->reg_index;
+          op.value = M[2]->value;
+          op.with_value = true;
+        }
+        else if( this->match({Tk::Value}) ) {
+          op.value = M[0]->value;
+          op.with_value = true;
+        }
+        else if( this->match({Tk::Register}) ) {
+          op.ra = M[0]->reg_index;
         }
         else
           goto __err;
       }
 
       // load or store
-      else if( iter->s.length() >= 3 && (iter->s.starts_with("ldr") || iter->s.starts_with("str")) ) {
+      else if( this->iter->s.length() >= 3 && (this->iter->s.starts_with("ldr") || this->iter->s.starts_with("str")) ) {
         auto& op = ret.emplace_back();
 
-        op.kind = iter->s == "ldr" ? Asm::Kind::Load : Asm::Kind::Store;
+        op.kind = this->iter->s == "ldr" ? Asm::Kind::Load : Asm::Kind::Store;
 
-        if( iter->s.length() > 3 ) {
-          switch( iter->s[3] ) {
+        if( this->iter->s.length() > 3 ) {
+          switch( this->iter->s[3] ) {
             case 'u': op.data_type = Asm::DataType::Long; break;
             case 'h': op.data_type = Asm::DataType::Word; break;
             case 's': op.data_type = Asm::DataType::Harf; break;
@@ -364,20 +381,37 @@ public:
         if( !this->match({Tk::Ident, Tk::Register, ",", "[", Tk::Register}) )
           goto __err;
 
-        op.ra = this->matched[1]->reg_index;
-        op.rb = this->matched[4]->reg_index;
+        op.ra = M[1]->reg_index;
+        op.rb = M[4]->reg_index;
 
         // offset
         if( this->match({",", Tk::Value}) ) {
-          op.value = this->matched[1]->value;
+          op.value = M[1]->value;
         }
 
-        if( iter++->s != "]" )
+        if( this->iter++->s != "]" )
           goto __err;
 
         if( this->match({",", Tk::Value}) ) {
-          op.rd = this->matched[1]->value & 0xFF;
+          op.rd = M[1]->value & 0xFF;
         }
+      }
+
+      // push / pop
+      else if( this->iter->s == "push" || this->iter->s == "pop" ) {
+        auto& op = ret.emplace_back(
+          this->iter++->s == "push" ? Asm::Kind::Push : Asm::Kind::Pop, 0, 0, 0);
+
+        this->expect("{");
+        
+        do {
+          if( this->iter->kind == Tk::Register )
+            op.reglist |= 1 << this->iter++->reg_index;
+          else
+            goto __err;
+        } while( this->eat(",") );
+
+        this->expect("}");
       }
 
       else {

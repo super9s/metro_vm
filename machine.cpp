@@ -22,7 +22,7 @@ void Machine::execute_code(std::vector<Asm> const& codes) {
 
       case Asm::Kind::Add:
         if( op.with_value )
-          cpu.registers[op.rd] += op.value;
+          cpu.registers[op.rd] = cpu.registers[op.ra] + op.value;
         else
           cpu.registers[op.rd] = cpu.registers[op.ra] + cpu.registers[op.rb];
 
@@ -46,13 +46,23 @@ void Machine::execute_code(std::vector<Asm> const& codes) {
         cpu.registers[op.rb] += op.rd;
         break;
 
-      case Asm::Kind::Push:
-        *cpu.sp++ = cpu.registers[op.ra];
-        break;
+      case Asm::Kind::Push: {
+        for( int i = 15; i >= 0; i-- ) {
+          if( op.reglist & (1 << i) )
+            *cpu.sp++ = cpu.registers[i];
+        }
 
-      case Asm::Kind::Pop:
-        cpu.registers[op.ra] = *cpu.sp--;
         break;
+      }
+
+      case Asm::Kind::Pop: {
+        for( int i = 0; i < 16; i++ ) {
+          if( op.reglist & (1 << i) )
+            cpu.registers[i] = *--cpu.sp;
+        }
+
+        break;
+      }
 
       case Asm::Kind::Call:
         cpu.lr = cpu.pc + 1;
