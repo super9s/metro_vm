@@ -1,5 +1,6 @@
 #include <iostream>
 #include <cstring>
+#include <cmath>
 #include "metro.h"
 
 namespace metro::vm {
@@ -41,18 +42,15 @@ void Machine::execute_code(std::vector<Asm> const& codes) {
         cpu.registers[op.rb] += op.rd;
         break;
 
-      case Asm::Kind::Store:
-        if( op.data_type == Asm::DataType::Byte )
-          *(u8*)(cpu.registers[op.rb] + op.value) = cpu.registers[op.ra] & 0xFF;
-        else if( op.data_type == Asm::DataType::Harf )
-          *(u16*)(cpu.registers[op.rb] + op.value) = cpu.registers[op.ra] & 0xFFFF;
-        else if( op.data_type == Asm::DataType::Word )
-          *(u32*)(cpu.registers[op.rb] + op.value) = cpu.registers[op.ra] & 0xFFFFFFFF;
-        else if( op.data_type == Asm::DataType::Long )
-          *(u64*)(cpu.registers[op.rb] + op.value) = cpu.registers[op.ra];
+      case Asm::Kind::Store: {
+        u64 mask = (u64)-1 << (int)std::pow(2, static_cast<int>(op.data_type) + 1) * 4;
+
+        *(u64*)(cpu.registers[op.rb] + op.value)
+          = (*(u64*)(cpu.registers[op.rb] + op.value) & mask) | (cpu.registers[op.ra] & ~mask);
 
         cpu.registers[op.rb] += op.rd;
         break;
+      }
 
       case Asm::Kind::Push: {
         for( int i = 15; i >= 0; i-- ) {

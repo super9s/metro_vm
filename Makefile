@@ -1,4 +1,4 @@
-TARGET		?= 	metro
+TARGET		?= 	lang
 DBGPREFIX	?=	d
 
 TOPDIR		?= 	$(CURDIR)
