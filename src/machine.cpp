@@ -75,9 +75,20 @@ void Machine::execute_code(std::vector<Asm> const& codes) {
       case Asm::Kind::Call:
         cpu.lr = cpu.pc + 1;
 
-      case Asm::Kind::Jump:
-        cpu.pc = op.value;
+      case Asm::Kind::Jump: {
+        for( size_t i = 0; i < codes.size(); i++ ) {
+          if( codes[i].kind == Asm::Kind::Label && codes[i].str == op.str ) {
+            cpu.pc = i;
+            goto xxx;
+          }
+        }
+
+        std::cout << "undefined label name '" << op.str << "'" << std::endl;
+        std::exit(1);
+
+      xxx:;
         break;
+      }
 
       case Asm::Kind::Jumpx:
         cpu.pc = cpu.registers[op.ra];
@@ -85,6 +96,7 @@ void Machine::execute_code(std::vector<Asm> const& codes) {
 
       /* ignore */
       case Asm::Kind::Data:
+      case Asm::Kind::Label:
         break;
     }
 

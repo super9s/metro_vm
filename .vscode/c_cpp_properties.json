@@ -1,21 +1,15 @@
 {
     "configurations": [
         {
-            "name": "Win32",
+            "name": "Linux",
             "includePath": [
                 "${workspaceFolder}/**"
             ],
-            "defines": [
-                "_DEBUG",
-                "UNICODE",
-                "_UNICODE",
-                "_METRO_DEBUG_"
-            ],
-            "windowsSdkVersion": "10.0.22621.0",
-            "compilerPath": "C:/mingw64/bin/gcc.exe",
+            "defines": [],
+            "compilerPath": "/usr/bin/clang",
             "cStandard": "c17",
             "cppStandard": "c++20",
-            "intelliSenseMode": "windows-gcc-x64"
+            "intelliSenseMode": "linux-clang-x64"
         }
     ],
     "version": 4

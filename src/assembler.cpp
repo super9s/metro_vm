@@ -341,7 +341,7 @@ public:
 
         auto& op = ret.emplace_back(Asm::Kind::Data, 0, 0, 0);
 
-        for( int i = 0; i < std::size(dtypes); i++ ) {
+        for( size_t i = 0; i < std::size(dtypes); i++ ) {
           if( M[1]->s == dtypes[i] ) {
             op.data_type = static_cast<Asm::DataType>(i);
             goto _found;
@@ -386,6 +386,11 @@ public:
       // call
       else if( this->match({"call", Tk::Ident}) ) {
         ret.emplace_back(Asm::Kind::Call).str = M[1]->s;
+      }
+
+      // jmp
+      else if( this->match({"jmp", Tk::Ident}) ) {
+        ret.emplace_back(Asm::Kind::Jump).str = M[1]->s;
       }
 
       /*
