@@ -38,15 +38,41 @@ void Machine::execute_code(std::vector<Asm> const& codes) {
         break;
 
       case Asm::Kind::Load:
-        cpu.registers[op.ra] = *(u64*)(cpu.registers[op.rb] + op.value) & ~(-1UL << (static_cast<int>(op.data_type) * 8));
+        cpu.registers[op.ra] = *(u64*)(cpu.registers[op.rb] + op.value) & ~(~0ULL << (int)std::pow(2, ((static_cast<int>(op.data_type) + 1)) * 4));
         cpu.registers[op.rb] += op.rd;
         break;
 
       case Asm::Kind::Store: {
-        u64 mask = (u64)-1 << (int)std::pow(2, static_cast<int>(op.data_type) + 1) * 4;
+        u64 addr = cpu.registers[op.rb] + op.value;
+        u64 val  = cpu.registers[op.ra];
+
+        switch( op.data_type ) {
+          case Asm::DataType::Byte:
+            *(u8*)addr = val & 0xFF;
+            break;
+
+          case Asm::DataType::Harf:
+            *(u8*)addr = val & 0xFFFF;
+            break;
+
+          case Asm::DataType::Word:
+            *(u8*)addr = val & 0xFFFFFF;
+            break;
+
+          case Asm::DataType::Long:
+            *(u8*)addr = val;
+            break;
+        }
+
+        /*
+        u64 mask = (~0ULL) << (int)std::pow(2, static_cast<int>(op.data_type) + 1) * 4; なぜ Long のときゼロにならない？おかしいやろ
+
+        printf("%d\n", op.data_type);
+        printf("%016zX\n", mask);
 
         *(u64*)(cpu.registers[op.rb] + op.value)
           = (*(u64*)(cpu.registers[op.rb] + op.value) & mask) | (cpu.registers[op.ra] & ~mask);
+        */
 
         cpu.registers[op.rb] += op.rd;
         break;

@@ -439,7 +439,7 @@ public:
       else if( this->iter->s.length() >= 3 && (this->iter->s.starts_with("ldr") || this->iter->s.starts_with("str")) ) {
         auto& op = ret.emplace_back();
 
-        op.kind = this->iter->s == "ldr" ? Asm::Kind::Load : Asm::Kind::Store;
+        op.kind = this->iter->s.starts_with("ldr") ? Asm::Kind::Load : Asm::Kind::Store;
 
         if( this->iter->s.length() > 3 ) {
           switch( this->iter->s[3] ) {
@@ -449,7 +449,7 @@ public:
             case 'b': op.data_type = Asm::DataType::Byte; break;
 
             default:
-              Err("unknown data type of ldr/str");
+              Err("'" + this->iter->s.substr(3) + "' is not valid a data type of ldr/str");
           }
         }
         else {
