@@ -293,6 +293,7 @@ struct VCPU {
   };
 
   VCPU()
+    : 
   {
   }
 };
@@ -335,6 +336,26 @@ public:
 };
 
 } // namespace vm
+
+
+
+
+
+class Assembler {
+ public:
+  Assembler();
+
+  bool is_open() const;
+
+
+ private:
+  
+  bool is_opened;
+  std::string path;
+
+};
+
+
 
 namespace assembler {
 

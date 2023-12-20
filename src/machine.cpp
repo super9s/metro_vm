@@ -65,7 +65,8 @@ void Machine::execute_code(std::vector<Asm> const& codes) {
         }
 
         /*
-        u64 mask = (~0ULL) << (int)std::pow(2, static_cast<int>(op.data_type) + 1) * 4; なぜ Long のときゼロにならない？おかしいやろ
+        u64 mask = (~0ULL) << (int)std::pow(2, static_cast<int>(op.data_type) + 1) * 4;
+        なぜ Long のときゼロにならない？！
 
         printf("%d\n", op.data_type);
         printf("%016zX\n", mask);

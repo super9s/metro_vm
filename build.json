@@ -1,0 +1,31 @@
+{
+    "metro": {
+        "output": "metro",
+        "depends": [
+            "lib"
+        ],
+        "folders": {
+            "objects": "build",
+            "include": "include",
+            "source": "src"
+        },
+        "flags": {
+            "cpp": {
+                "common": [
+                    "-std=c++20"
+                ],
+                "release": "-O3",
+                "debug": "-O0 -g -DMETRO_DEBUG"
+            }
+        },
+        "linker": {
+            "flag": [
+                "--gc-sections",
+                "-s"
+            ]
+        }
+    },
+    "lib": {
+        "type": "library"
+    }
+}

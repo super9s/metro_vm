@@ -5,9 +5,10 @@ TOPDIR		?= 	$(CURDIR)
 BUILD		:= 	build
 INCLUDE		:= 	include
 SOURCE		:= 	src
+LIBDIR		:=	lib
 
-CC			:=	clang
-CXX			:=	clang++
+CC			:=	gcc
+CXX			:=	g++
 
 OPTI		?=	-O0 -g -D_METRO_DEBUG_
 COMMON		:=	$(OPTI) -Wall -Wextra -Wno-switch $(INCLUDES)
@@ -28,10 +29,11 @@ ifneq ($(BUILD), $(notdir $(CURDIR)))
 CFILES			= $(notdir $(foreach dir,$(SOURCE),$(wildcard $(dir)/*.c)))
 CXXFILES		= $(notdir $(foreach dir,$(SOURCE),$(wildcard $(dir)/*.cpp)))
 
-export OUTPUT		= $(TOPDIR)/$(TARGET)$(DBGPREFIX)
-export VPATH		= $(foreach dir,$(SOURCE),$(TOPDIR)/$(dir))
-export INCLUDES		= $(foreach dir,$(INCLUDE),-I$(TOPDIR)/$(dir))
-export OFILES		= $(CFILES:.c=.o) $(CXXFILES:.cpp=.o)
+export OUTPUT		:=	$(TOPDIR)/$(TARGET)$(DBGPREFIX)
+export OFILES		:=	$(CFILES:.c=.o) $(CXXFILES:.cpp=.o)
+export VPATH		:=	$(foreach dir,$(SOURCE),$(TOPDIR)/$(dir))
+export INCLUDES		:=	$(foreach dir,$(INCLUDE),-I$(TOPDIR)/$(dir)) \
+						$(foreach dir,$(LIBDIR),-I$(dir)/include)
 
 .PHONY: $(BUILD) all re clean
 
