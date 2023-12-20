@@ -99,13 +99,13 @@ class Builder:
             return True
 
         depends = self.get_dependencies(self.as_depend_path(path))
-        time = os.path.getmtime(path)
+        time = os.path.getmtime(self.as_object_path(path))
 
         if depends == None:
             return True
 
         for d in depends:
-            if time > os.path.getmtime(d):
+            if time < os.path.getmtime(d):
                 return True
 
         return False
@@ -153,8 +153,19 @@ class Builder:
 
         self.is_compiled = True
 
-    def link(self, path):
-        
+    def link(self):
+        flag = self.context[KEY_FLAGS][KEY_FLAGS_LINKER]
+
+        if self.context[KEY_DEBUG] == 'true':
+            flag = flag[KEY_FLAGS_DEBUG]
+        else:
+            flag = flag[KEY_FLAGS_RELEASE]
+
+        if flag != '':
+            flag = '-Wl,' + ','.join(flag)
+
+        print('linking...')
+        os.system(f'{self.context[KEY_COMPILER]} -o {self.output} {flag} {" ".join([self.as_object_path(x) for x in self.sources])}')
 
     def build(self) -> bool:
         for source in self.sources:
@@ -176,8 +187,6 @@ class Driver:
 
             for k in tmp.keys():
                 self.builders[k] = Builder(k, tmp[k])
-
-    
 
     def build_all(self):
         for k in self.builders.keys():
