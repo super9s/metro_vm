@@ -30,17 +30,57 @@ void Machine::execute_code(std::vector<Asm> const& codes) {
       }
 
       case Asm::Kind::Add:
-        if( op.with_value )
-          cpu.registers[op.rd] = cpu.registers[op.ra] + op.value;
-        else
-          cpu.registers[op.rd] = cpu.registers[op.ra] + cpu.registers[op.rb];
+        if( op.with_value ) cpu.registers[op.rd] = cpu.registers[op.ra] + op.value;
+        else                cpu.registers[op.rd] = cpu.registers[op.ra] + cpu.registers[op.rb];
 
         break;
 
-      case Asm::Kind::Load:
-        cpu.registers[op.ra] = *(u64*)(cpu.registers[op.rb] + op.value) & ~(~0ULL << (int)std::pow(2, ((static_cast<int>(op.data_type) + 1)) * 4));
+      case Asm::Kind::Sub:
+        if( op.with_value ) cpu.registers[op.rd] = cpu.registers[op.ra] - op.value;
+        else                cpu.registers[op.rd] = cpu.registers[op.ra] - cpu.registers[op.rb];
+
+        break;
+
+      case Asm::Kind::Mul:
+        if( op.with_value ) cpu.registers[op.rd] = cpu.registers[op.ra] * op.value;
+        else                cpu.registers[op.rd] = cpu.registers[op.ra] * cpu.registers[op.rb];
+
+        break;
+
+      case Asm::Kind::Div:
+        if( op.with_value ) cpu.registers[op.rd] = cpu.registers[op.ra] / op.value;
+        else                cpu.registers[op.rd] = cpu.registers[op.ra] / cpu.registers[op.rb];
+
+        break;
+
+      case Asm::Kind::Mod:
+        if( op.with_value ) cpu.registers[op.rd] = cpu.registers[op.ra] % op.value;
+        else                cpu.registers[op.rd] = cpu.registers[op.ra] % cpu.registers[op.rb];
+
+        break;
+
+      case Asm::Kind::Load: {
+        switch( op.data_type ) {
+          case Asm::DataType::Byte:
+            cpu.registers[op.ra] = *(u8*)(cpu.registers[op.rb] + op.value);
+            break;
+
+          case Asm::DataType::Harf:
+            cpu.registers[op.ra] = *(u16*)(cpu.registers[op.rb] + op.value);
+            break;
+
+          case Asm::DataType::Word:
+            cpu.registers[op.ra] = *(u32*)(cpu.registers[op.rb] + op.value);
+            break;
+
+          case Asm::DataType::Long:
+            cpu.registers[op.ra] = *(u64*)(cpu.registers[op.rb] + op.value);
+            break;
+        }
+
         cpu.registers[op.rb] += op.rd;
         break;
+      }
 
       case Asm::Kind::Store: {
         u64 addr = cpu.registers[op.rb] + op.value;
@@ -52,15 +92,15 @@ void Machine::execute_code(std::vector<Asm> const& codes) {
             break;
 
           case Asm::DataType::Harf:
-            *(u8*)addr = val & 0xFFFF;
+            *(u16*)addr = val & 0xFFFF;
             break;
 
           case Asm::DataType::Word:
-            *(u8*)addr = val & 0xFFFFFF;
+            *(u32*)addr = val & 0xFFFFFF;
             break;
 
           case Asm::DataType::Long:
-            *(u8*)addr = val;
+            *(u64*)addr = val;
             break;
         }
 
@@ -103,7 +143,7 @@ void Machine::execute_code(std::vector<Asm> const& codes) {
       case Asm::Kind::Jump: {
         for( size_t i = 0; i < codes.size(); i++ ) {
           if( codes[i].kind == Asm::Kind::Label && codes[i].str == op.str ) {
-            cpu.pc = i;
+            cpu.pc = i + 1;
             goto xxx;
           }
         }
@@ -112,12 +152,31 @@ void Machine::execute_code(std::vector<Asm> const& codes) {
         std::exit(1);
 
       xxx:;
-        break;
+        continue;
       }
 
       case Asm::Kind::Jumpx:
         cpu.pc = cpu.registers[op.ra];
+
+        if( cpu.pc == (u64)-1 )
+          return;
+
+        continue;
+
+      case Asm::Kind::SysCall: {
+
+        switch( op.value ) {
+          // print char
+          case 0:
+            printf("%c", (char)cpu.registers[0]);
+            break;
+
+          default:
+            todo_impl;
+        }
+
         break;
+      }
 
       /* ignore */
       case Asm::Kind::Data:

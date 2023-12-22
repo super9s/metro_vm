@@ -154,6 +154,17 @@ public:
         token.reg_index = i;
       }
 
+      // value (char)
+      else if( this->eat("#'") ) {
+        token.kind = Token::Kind::Value;
+        token.value = this->peek();
+
+        this->position++;
+        if( !this->eat("'") ) {
+          Err("unclosed");
+        }
+      }
+
       // value
       else if( this->eat("#") ) {
         token.kind = Token::Kind::Value;
@@ -393,6 +404,16 @@ public:
         ret.emplace_back(Asm::Kind::Jump).str = M[1]->s;
       }
 
+      // jx
+      else if( this->match({"jx", Tk::Register}) ) {
+        ret.emplace_back(Asm::Kind::Jumpx).ra = M[1]->reg_index;
+      }
+
+      // syscall
+      else if( this->match({"sys", Tk::Value}) ) {
+        ret.emplace_back(Asm::Kind::SysCall).value = M[1]->value;
+      }
+
       /*
        * op rd, ra
        *    rd, #value
@@ -444,12 +465,12 @@ public:
         if( this->iter->s.length() > 3 ) {
           switch( this->iter->s[3] ) {
             case 'u': op.data_type = Asm::DataType::Long; break;
-            case 'h': op.data_type = Asm::DataType::Word; break;
-            case 's': op.data_type = Asm::DataType::Harf; break;
+            case 'w': op.data_type = Asm::DataType::Word; break;
+            case 'h': op.data_type = Asm::DataType::Harf; break;
             case 'b': op.data_type = Asm::DataType::Byte; break;
 
             default:
-              Err("'" + this->iter->s.substr(3) + "' is not valid a data type of ldr/str");
+              Err("'" + this->iter->s.substr(3) + "' is not a data type of ldr/str");
           }
         }
         else {
@@ -483,6 +504,19 @@ public:
         this->expect("{");
 
         do {
+          if( this->match({Tk::Register, "-", Tk::Register}) ) {
+            auto begin = M[0]->reg_index;
+            auto end = M[2]->reg_index;
+
+            if( begin >= end )
+              goto __err;
+  
+            while( begin < end )
+              op.reglist |= 1 << (begin++);
+
+            continue;
+          }
+
           if( this->iter->kind == Tk::Register )
             op.reglist |= 1 << this->iter++->reg_index;
           else

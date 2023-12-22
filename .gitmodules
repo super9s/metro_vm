@@ -1,0 +1,3 @@
+[submodule "cppbld"]
+	path = cppbld
+	url = https://github.com/hide0123/cppbld

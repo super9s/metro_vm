@@ -44,6 +44,8 @@ int main(int argc, char** argv) {
 
   machine.execute_code(codes);
 
+  puts("\n");
+
   for( int i = 0; i < 16; i += 2 ) {
     printf("r%d%s  %016zX   r%d%s  %016zX\n",
       i, i < 10 ? " " : "", machine.cpu.registers[i],

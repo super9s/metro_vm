@@ -170,8 +170,8 @@ namespace vm {
  * 
  *  ストア・ロード命令向けビット幅指定記号:
  *    u   = 64bit  // default
- *    h   = 32bit
- *    s   = 16bit
+ *    w   = 32bit
+ *    h   = 16bit
  *    b   = 8bit
  * 
  */
@@ -209,7 +209,10 @@ struct Asm {
     /* Branch */
     Call,       // call   <label>
     Jump,       // jmp    <label>
-    Jumpx,      // jmpx   rA
+    Jumpx,      // jx     rA
+
+    // system call
+    SysCall,    // sys #value
 
     /*
      * Place a data.
